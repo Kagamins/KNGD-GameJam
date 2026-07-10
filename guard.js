@@ -286,8 +286,43 @@ export class Guard {
       this.aimAngle = this.vx >= 0 ? 0 : Math.PI;
       this.gazeDamageTimer = 0;
     }
+    if (this.target) {
+      // Calculate vector to target
+      const dx = this.target.x - this.x;
+      const dy = this.target.y - this.y;
+      this.aimAngle = Math.atan2(dy, dx);
+
+
+      // Move toward the target
+      this.moveTowards(this.target.x, this.target.y);
+
+      // Shoot at the target if in range (using your existing shoot logic)
+      this.attemptShoot(this.target, gameEngine);
+    }
   }
 
+  attemptShoot(targetEntity, gameEngine) {
+
+    gameEngine.damagePlayer(targetEntity);
+  }
+  // Add this method to the Guard class in guard.js
+  moveTowards(targetX, targetY) {
+    const dx = targetX - this.x;
+    const dy = targetY - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    // Normalize and scale by baseSpeed
+    this.vx = (dx / dist) * this.baseSpeed;
+    this.vy = (dy / dist) * this.baseSpeed;
+
+    // Apply movement
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Update facing direction for animations
+    if (this.vx > 0.1) this.facing = 'right';
+    else if (this.vx < -0.1) this.facing = 'left';
+  }
   draw(ctx, cameraX, cameraY) {
     const rx = this.x - cameraX;
     const ry = this.y - cameraY;

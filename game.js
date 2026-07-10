@@ -308,6 +308,29 @@ class GameEngine {
     this.mode = 'single';
   }
 
+  // Add to GameEngine class in game.js
+  renderSplitScreen() {
+    const halfH = CANVAS_HEIGHT / 2;
+
+    // Viewport 1 (Player 1)
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, CANVAS_WIDTH, halfH);
+    this.ctx.clip();
+    this.setCamera(this.players[0]); // Helper to center camera on P1
+    this.render();
+    this.ctx.restore();
+
+    // Viewport 2 (Player 2)
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.rect(0, halfH, CANVAS_WIDTH, halfH);
+    this.ctx.clip();
+    this.setCamera(this.players[1]); // Helper to center camera on P2
+    this.render();
+    this.ctx.restore();
+  }
+
   startMultiplayerGame() {
     // Host manually launches the session for everyone
     this.startGame();
@@ -904,7 +927,7 @@ class GameEngine {
             const ky = (dy / dist) * 2.2;
             p.vx += kx;
             p.vy += ky;
-
+            this.damagePlayer(p);
             // If player rolls/dashes into the guard, knock them down (5 seconds)
             if (p.isRolling) {
               g.knockedTimer = 300; // 5 seconds at 60fps
@@ -1084,6 +1107,7 @@ class GameEngine {
         }
       }
 
+
       // Hit guard (iterate backwards to safely splice)
       for (let gi = this.guards.length - 1; gi >= 0; gi--) {
         const g = this.guards[gi];
@@ -1102,14 +1126,13 @@ class GameEngine {
       }
 
       // Hit player (only guard lasers; camo'd players dodge)
+      // Inside updateProjectiles() in game.js
       if (laser.type === 'guard') {
         for (const player of this.players) {
           if (!player || !player.active || player.isRolling || player.camoActive) continue;
-          // Z-axis check for 2.5D perspective
-          const playerZ = player.z || 0;
-          if (Math.abs(laser.z - playerZ) < 24 &&
+          if (Math.abs(laser.z - (player.z || 0)) < 24 &&
             Physics.checkAABB(laser.x, laser.y, laser.width, laser.height, player.x, player.y, player.width, player.height)) {
-            this.damagePlayer(player);
+            this.damagePlayer(player); // This method already reduces player HP
             return false;
           }
         }
@@ -1121,13 +1144,23 @@ class GameEngine {
 
   damageGuard(guard, index, laser) {
     let damage = 1;
+    const shooter = this.players.find(p => p.id === laser.sourceId);
     if (laser.subType === 'railgun') damage = 3;
     guard.hp -= damage;
     this.spawnExplosion(guard.x + 12, guard.y + 12, '#ff0055');
     AudioController.playHurt();
 
     this.hitstopTimer = 4;
+    if (shooter) {
+      // 2. Set the guard's target to the player who shot them
+      guard.target = shooter;
 
+      // 3. Optional: Trigger an "Alert" state or visual effect
+      guard.isAlerted = true;
+
+      // Log the retaliation for debugging
+      this.addLog(`Guard ${guard.id} is retaliating against Player ${shooter.id}`);
+    }
     // Friendly-fire mutiny chain
     if (laser.type === 'guard' && laser.ownerId && laser.ownerId !== guard.id) {
       const attacker = this.guards.find(g => g.id === laser.ownerId);
@@ -1164,6 +1197,30 @@ class GameEngine {
           this.incrementMutiny(refP.illusionColor, mutinyGain);
           this.addLog(`⚡ ILLUSION STRIKE: Mutiny +${mutinyGain} for Faction ${refP.illusionColor}!`, 'success');
         }
+        // --- ADD WITNESS LOGIC HERE ---
+        if (laser.type === 'player') {
+          const WITNESS_RADIUS = 300;
+          const player = this.players[this.localPlayerIndex] || this.players[0];
+
+          // Find nearby guards of the same color who are not dead
+          this.guards.forEach(otherG => {
+            if (otherG.id !== guard.id && otherG.colorCode === guard.colorCode && otherG.hp > 0) {
+              const dx = otherG.x - guard.x;
+              const dy = otherG.y - guard.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist < WITNESS_RADIUS) {
+                // If guard has line of sight to player, they become hostile
+                const hasLOS = Physics.checkLineOfSight(otherG.x, otherG.y, player.x, player.y, this.platforms);
+                if (hasLOS) {
+                  otherG.target = player;
+                  this.addLog(`🚨 WITNESS: ${otherG.colorCode} Guard saw their comrade die!`, 'alert');
+                }
+              }
+            }
+          });
+        }
+
       }
 
       this.guards.splice(index, 1);
@@ -1199,12 +1256,24 @@ class GameEngine {
     }
   }
 
+
+  healPlayer(player) {
+    if (player.invincibilityFrames > 0) return;
+    AudioController.playHurt();
+    this.spawnExplosion(player.x + 12, player.y + 12, player.color);
+    if (player.hp < player.maxHp) player.hp += 1;
+    else if (player.hp === player.maxHp) {
+      player.rankProgress += 50;
+      this.addLog('> RANK PROGRESS INCREASED!', 'success');
+    }
+  }
+
   damagePlayer(player) {
     if (player.invincibilityFrames > 0) return;
     AudioController.playHurt();
     this.spawnExplosion(player.x + 12, player.y + 12, player.color);
 
-    player.hp = Math.max(0, player.hp - 2);
+    player.hp = Math.max(0, player.hp - 0.05);
     player.rankProgress = Math.max(0, player.rankProgress - 15);
     player.invincibilityFrames = 45;
 
@@ -1462,7 +1531,9 @@ class GameEngine {
 
     this.ammoDrops = this.ammoDrops.filter(crate => {
       if (Physics.checkAABB(crate.x, crate.y, crate.w, crate.h, player.x, player.y, player.width, player.height)) {
-        player.ammo = Math.min(player.maxAmmo, player.ammo + 5); AudioController.playRankUp();
+        player.ammo = Math.min(player.maxAmmo, player.ammo + 5);
+        AudioController.playRankUp();
+        this.healPlayer(player);
         this.addLog('> AMMO CELLS RECOVERED: +5', 'success');
         return false;
       }
@@ -1556,6 +1627,7 @@ class GameEngine {
       player.rankProgress = 0;
       player.rank = Math.min(4, player.rank + 1);
       AudioController.playLevelUp();
+      player.hp = player.maxHp;
       this.screenshakeTimer = 22;
       this.screenshakeIntensity = 7.5;
       this.rankUpAlertTimer = 120; // 2 seconds banner
@@ -2468,10 +2540,10 @@ class GameEngine {
   endGame(won, reason) {
     this.state = STATE_GAMEOVER;
     if (won) {
-    AudioController.playWinTheme();
-  } else {
-    AudioController.playFailTheme();
-  }
+      AudioController.playWinTheme();
+    } else {
+      AudioController.playFailTheme();
+    }
     AudioController.stopAll();
 
     // Clear the canvas so no stale gameplay frame shows behind the overlay
