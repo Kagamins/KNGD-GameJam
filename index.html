@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Isle Infiltrator: Rank &amp; File Chaos</title>
+  <meta name="description"
+    content="Top-down co-op stealth shooter set on a hidden tropical island. Disguise yourself, trigger mutinies among the reptilian garrison, and survive the waves. Up to 4 players on LAN.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- CRT Monitor filter -->
+  <div class="crt-overlay"></div>
+
+  <div id="game-container">
+
+    <!-- ===== MAIN LOBBY ===== -->
+    <div id="lobby-screen" class="screen active">
+      <div class="hologram-card" style="max-width: 960px; width: 95%;">
+        
+        <!-- Header row containing Title/Subtitle on the left and Logo on the right -->
+        <div class="lobby-header-flex" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 30px; margin-bottom: 20px;">
+          <div class="lobby-title-block" style="text-align: left;">
+            <h1 class="glitch-text" data-text="ISLE INFILTRATOR" style="text-align: left; margin: 0;">ISLE INFILTRATOR</h1>
+            <p class="subtitle" style="text-align: left; margin: 5px 0 0 0;">RANK &amp; FILE CHAOS // JUNGLE GARRISON INFILTRATION</p>
+          </div>
+          <div class="lobby-right-logo" style="flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
+            <img src="assets/logo.png" alt="Isle Infiltrator Logo" style="width: 140px; height: auto; border-radius: 12px; box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); border: 1.5px solid var(--color-border);" />
+          </div>
+        </div>
+
+        <div class="lobby-flex-container"
+          style="display: flex; flex-direction: row; gap: 30px; align-items: flex-start; justify-content: space-between; text-align: left;">
+
+          <!-- Left Content Side -->
+          <div class="lobby-left-content" style="flex: 1; min-width: 0;">
+            <!-- NICKNAME INPUT — shared for solo, host, and join -->
+            <div class="nickname-section" style="align-items: flex-start; margin: 10px 0 20px 0;">
+              <label class="nick-label" for="nickname-input">OPERATIVE CALLSIGN</label>
+              <input id="nickname-input" class="nickname-input" type="text" maxlength="12" placeholder="NickName"
+                autocomplete="off" spellcheck="false" style="text-align: left; width: 100%; max-width: 320px;" />
+            </div>
+
+            <div class="menu-sections" style="display: flex; flex-direction: row; gap: 15px;">
+              <!-- Solo & Local -->
+              <div class="menu-box" style="flex: 1; padding: 15px;">
+                <h3>SOLO &amp; LOCAL</h3>
+                <button id="btn-single-player" class="btn primary" style="margin-bottom: 8px; width: 100%;">INFILTRATE
+                  ALONE</button>
+                <button id="btn-local-coop" class="btn secondary" style="width: 100%;">LOCAL CO-OP (2 PLAYERS)</button>
+              </div>
+            </div>
+
+            <!-- Bottom menu buttons row -->
+            <div style="display: flex; justify-content: flex-start; gap: 12px; margin-top: 12px;">
+              <button id="btn-options" class="btn text" style="font-size: 0.65rem; padding: 6px 14px;">⚙
+                OPTIONS</button>
+              <button id="btn-controls-lobby" class="btn text" style="font-size: 0.65rem; padding: 6px 14px;">🎮
+                CONTROLS</button>
+            </div>
+
+            <div class="credits" style="text-align: left; margin-top: 15px;">FIELD KIT V6.13 // LOCAL PLAY ONLY // WAVE
+              ASSAULT MODE</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== WAITING TO START SCREEN (joiners see this) ===== -->
+    <div id="waiting-screen" class="screen hidden">
+      <div class="hologram-card waiting-card">
+        <div class="waiting-header">
+          <div class="pulse-ring-outer">
+            <div class="pulse-ring-inner"></div>
+          </div>
+          <h2 class="glitch-text" style="font-size:1.6rem;margin:0" data-text="STANDING BY">STANDING BY</h2>
+        </div>
+        <p class="subtitle" style="margin-bottom:12px;">INFILTRATION SQUAD FORMING</p>
+
+        <div class="waiting-code-block">
+          <span class="conn-sublabel">ROOM CODE</span>
+          <div class="room-code-display" id="waiting-room-code" style="font-size:1.4rem;letter-spacing:0.35em;">----
+          </div>
+        </div>
+
+        <div class="squad-roster">
+          <h3 class="roster-title">OPERATIVE ROSTER</h3>
+          <div id="waiting-player-list" class="player-list"></div>
+          <p id="waiting-count" class="conn-sublabel" style="margin-top:6px;text-align:center;">0/4 OPERATIVES</p>
+        </div>
+
+        <div class="waiting-status-row">
+          <span class="blink waiting-dot">◉</span>
+          <span id="waiting-status-text">TUNNELING TO HOST...</span>
+        </div>
+        <button id="btn-waiting-back" class="btn text" style="margin-top:15px; width:100%;">BACK TO MENU</button>
+      </div>
+    </div>
+
+    <!-- ===== HUD OVERLAY ===== -->
+    <div id="hud-overlay" class="hidden">
+      <header class="hud-header-container">
+        <div class="hud-left-status"
+          style="width: 100%; display: flex; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+          <!-- Top Row Statuses -->
+          <div class="hud-top-row" style="display: flex; align-items: center; gap: 16px;">
+            <div class="vertical-gauge-container" title="HP RESERVES"
+              style="display: inline-flex; flex-direction: row; align-items: center; gap: 4px;">
+              <label style="margin: 0; font-size: 0.7rem;">H</label>
+              <div class="vertical-bar"
+                style="width: 8px; height: 18px; border: 1px solid var(--color-border); margin: 0;">
+                <div id="barfill-hp" class="v-fill hp-color" style="height:100%;"></div>
+              </div>
+            </div>
+            <div class="vertical-gauge-container" title="AMMO CELLS"
+              style="display: inline-flex; flex-direction: row; align-items: center; gap: 4px;">
+              <label style="margin: 0; font-size: 0.7rem;">A</label>
+              <div class="vertical-bar"
+                style="width: 8px; height: 18px; border: 1px solid var(--color-border); margin: 0;">
+                <div id="barfill-ammo" class="v-fill ammo-color" style="height:100%;"></div>
+              </div>
+            </div>
+            <span class="ticker-sep">|</span>
+            <span id="hud-wave">WAVE: 0</span>
+            <span class="ticker-sep">|</span>
+            <span id="hud-weapon" style="color:#3cff00">🔫 BLASTER</span>
+            <span class="ticker-sep">|</span>
+            <span id="hud-grenades" style="color:#ffb700">💣 3/3</span>
+            <span class="ticker-sep">|</span>
+            <span id="hud-camo" style="color:#3cff00">CAMO: READY</span>
+            <span class="ticker-sep">|</span>
+            <span id="hud-color" style="color:#33ff33">COLOR: G (5/5)</span>
+            <span class="ticker-sep">|</span>
+            <button id="btn-pause-game" class="btn-pause-hud">PAUSE</button>
+          </div>
+
+          <!-- Mutiny Progress Tracking Faction Gauges -->
+          <div class="hud-mutiny-row" style="display: flex; gap: 15px; align-items: center;">
+            <span style="font-size: 0.65rem; color: #64748b; font-weight: bold; letter-spacing: 0.05em;">MUTINY:</span>
+            <div class="faction-bar-container" title="RED FACTION"
+              style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #ff3333; font-size: 0.65rem; font-weight: bold;">R</span>
+              <div class="hud-progress-track"
+                style="width: 60px; height: 6px; background: rgba(255, 51, 81, 0.15); border: 1px solid rgba(255, 51, 81, 0.4); border-radius: 3px; position: relative; overflow: hidden;">
+                <div id="mutiny-fill-r"
+                  style="width: 0%; height: 100%; background: #ff3333; box-shadow: 0 0 8px #ff3333; transition: width 0.3s ease;">
+                </div>
+              </div>
+            </div>
+            <div class="faction-bar-container" title="GREEN FACTION"
+              style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #33ff33; font-size: 0.65rem; font-weight: bold;">G</span>
+              <div class="hud-progress-track"
+                style="width: 60px; height: 6px; background: rgba(51, 255, 51, 0.15); border: 1px solid rgba(51, 255, 51, 0.4); border-radius: 3px; position: relative; overflow: hidden;">
+                <div id="mutiny-fill-g"
+                  style="width: 0%; height: 100%; background: #33ff33; box-shadow: 0 0 8px #33ff33; transition: width 0.3s ease;">
+                </div>
+              </div>
+            </div>
+            <div class="faction-bar-container" title="BLUE FACTION"
+              style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #3333ff; font-size: 0.65rem; font-weight: bold;">B</span>
+              <div class="hud-progress-track"
+                style="width: 60px; height: 6px; background: rgba(51, 51, 255, 0.15); border: 1px solid rgba(51, 51, 255, 0.4); border-radius: 3px; position: relative; overflow: hidden;">
+                <div id="mutiny-fill-b"
+                  style="width: 0%; height: 100%; background: #3333ff; box-shadow: 0 0 8px #3333ff; transition: width 0.3s ease;">
+                </div>
+              </div>
+            </div>
+            <span class="ticker-sep">|</span>
+            <div class="faction-bar-container" title="CHAOS LEVEL"
+              style="display: flex; align-items: center; gap: 4px;">
+              <span id="hud-chaos-label"
+                style="font-size: 0.65rem; color: #00f2ff; font-weight: bold; letter-spacing: 0.05em; font-family: var(--font-mono);">CHAOS:</span>
+              <div class="hud-progress-track"
+                style="width: 80px; height: 8px; background: rgba(0, 242, 255, 0.15); border: 1px solid rgba(0, 242, 255, 0.4); border-radius: 4px; position: relative; overflow: hidden;">
+                <div id="hud-chaos-fill"
+                  style="width: 0%; height: 100%; background: #00f2ff; box-shadow: 0 0 8px #00f2ff; transition: width 0.3s ease;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Row (Game stats & currency) -->
+          <div class="hud-bottom-row" style="display: flex; gap: 15px; align-items: center;">
+            <span id="hud-timer" style="font-family: var(--font-mono); font-size: 0.75rem; color: #fff;">TIME:
+              00:00</span>
+            <span id="hud-credits"
+              style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-warning);">CREDITS: 0</span>
+            <span id="hud-score" style="font-family: var(--font-mono); font-size: 0.75rem; color: #3cff00;">SCORE:
+              0</span>
+
+            <!-- Co-op team HP mini-bars -->
+            <div id="coop-bars" style="display: inline-flex; gap: 6px;">
+              <div id="coop-bar-1" class="coop-bar" style="display:none;">
+                <span class="coop-label" style="color:#00f2ff">P2</span>
+                <div class="coop-hp-track">
+                  <div class="coop-hp-fill" style="background:#00f2ff;width:100%;"></div>
+                </div>
+              </div>
+              <div id="coop-bar-2" class="coop-bar" style="display:none;">
+                <span class="coop-label" style="color:#ffb700">P3</span>
+                <div class="coop-hp-track">
+                  <div class="coop-hp-fill" style="background:#ffb700;width:100%;"></div>
+                </div>
+              </div>
+              <div id="coop-bar-3" class="coop-bar" style="display:none;">
+                <span class="coop-label" style="color:#ff69b4">P4</span>
+                <div class="coop-hp-track">
+                  <div class="coop-hp-fill" style="background:#ff69b4;width:100%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Alarm banner -->
+      <div id="core-alarm" class="alarm-banner hidden">
+        <div class="alarm-icon">⚠</div>
+        <div class="alarm-msg">MUTINY ALARM: INTRUDERS INJECTING DECEIT</div>
+      </div>
+
+      <canvas id="game-canvas"></canvas>
+
+      <div id="terminal-screen" class="minimal-ticker">
+        <div id="terminal-content">
+          <div class="terminal-log-row">> INFILTRATE. BLEND IN. TRIGGER CHAOS.</div>
+        </div>
+      </div>
+
+      <!-- Mobile touch controls -->
+      <div id="touch-controls-container" class="hidden">
+        <div id="touch-dpad-zone">
+          <div class="dpad-vertical-layout">
+            <button id="btn-dpad-up" class="btn-touch-dpad">▲</button>
+            <div class="dpad-horizontal-row">
+              <button id="btn-dpad-left" class="btn-touch-dpad">◀</button>
+              <button id="btn-dpad-right" class="btn-touch-dpad">▶</button>
+            </div>
+            <button id="btn-dpad-down" class="btn-touch-dpad">▼</button>
+          </div>
+          <button id="btn-touch-dash" class="btn-touch-circle secondary">ROLL</button>
+        </div>
+        <div id="touch-action-zone">
+          <button id="btn-touch-shoot" class="btn-touch-circle">FIRE</button>
+          <button id="btn-touch-weapon" class="btn-touch-circle secondary">CYCLE</button>
+          <button id="btn-touch-decoy" class="btn-touch-circle tertiary">DECOY</button>
+          <button id="btn-touch-camo" class="btn-touch-circle camo-btn">CAMO</button>
+          <button id="btn-touch-color" class="btn-touch-circle color-btn">COLOR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TACTICAL BRIEFING TUTORIAL OVERLAY ===== -->
+    <div id="briefing-screen" class="screen hidden">
+      <div class="hologram-card" style="max-width: 480px; padding: 25px; text-align: left;">
+        <h2 class="glitch-text" data-text="TACTICAL BRIEFING"
+          style="font-size: 1.6rem; margin-bottom: 5px; text-align: center;">TACTICAL BRIEFING</h2>
+        <p class="subtitle" style="margin-bottom: 20px; text-align: center;">SIMULATION LOADED: OBTAIN OBJECTIVES</p>
+
+        <div class="stats-report" style="margin-bottom: 15px; font-size: 0.75rem; line-height: 1.4;">
+          <h3 style="margin-top: 0;">MISSION CONTROLS</h3>
+          <div class="stat-row"><span>WASD / ARROWS</span> <span>MOVE DEPTH & PLANE</span></div>
+          <div class="stat-row"><span>SPACE</span> <span>JUMP / HOP</span></div>
+          <div class="stat-row"><span>SHIFT</span> <span>DODGE ROLL</span></div>
+          <div class="stat-row"><span>LEFT CLICK / J</span> <span>FIRE blaster / shotgun / railgun</span></div>
+          <div class="stat-row"><span>C KEY</span> <span>CAMOUFLAGE INVISIBILITY</span></div>
+          <div class="stat-row"><span>X KEY</span> <span>SWAP DISGUISE FACTION (R, G, B)</span></div>
+        </div>
+
+        <div class="stats-report" style="margin-bottom: 20px; font-size: 0.75rem; line-height: 1.4;">
+          <h3 style="margin-top: 0;">MUTINY OBJECTIVE</h3>
+          <p style="margin: 0; color: #94a3b8;">
+            You are the Isle Infiltrator. <strong>Guards will only fire if you mismatch their color faction</strong>.
+            Trick guards of different colors into shooting each other to fill the Red, Green, and Blue <strong>Mutiny
+              Bars</strong>.
+            Reach 100% Chaos Level (average of all meters) to win.
+          </p>
+        </div>
+
+        <button id="btn-start-briefing" class="btn primary" style="width: 100%;">BEGIN OPERATION</button>
+      </div>
+    </div>
+
+    <!-- ===== PAUSE SCREEN ===== -->
+    <div id="pause-screen" class="screen hidden">
+      <div class="hologram-card" style="max-width: 300px; padding: 25px;">
+        <h2 class="glitch-text" data-text="SYSTEM PAUSED" style="font-size: 1.5rem; margin-bottom: 5px;">SYSTEM PAUSED
+        </h2>
+        <p class="subtitle" style="margin-bottom: 25px;">INFILTRATION SUSPENDED</p>
+        <button id="btn-resume" class="btn primary" style="width: 100%; margin-bottom: 10px;">RESUME OPERATION</button>
+        <button id="btn-pause-controls" class="btn secondary" style="width: 100%; margin-bottom: 10px;">🎮
+          CONTROLS</button>
+        <button id="btn-pause-options" class="btn secondary" style="width: 100%; margin-bottom: 10px;">⚙
+          OPTIONS</button>
+        <button id="btn-pause-quit" class="btn text" style="width: 100%;">ABANDON TO LOBBY</button>
+      </div>
+    </div>
+
+    <!-- ===== GAME OVER SCREEN ===== -->
+    <div id="game-over-screen" class="screen hidden">
+      <div class="hologram-card">
+        <h1 id="game-over-title" class="glitch-text" data-text="MUTINY SUCCESSFUL">MUTINY SUCCESSFUL</h1>
+        <p id="game-over-reason">THE ISLAND GARRISON DESTROYED EACH OTHER IN THE ILLUSION CHAOS.</p>
+        <div class="stats-report">
+          <h3>INFILTRATION ARCHIVE</h3>
+          <div class="stat-row"><span>FINAL DISGUISE RANK:</span> <span id="stat-rank">GRUNT</span></div>
+          <div class="stat-row"><span>CHAOS LEVEL:</span> <span id="stat-chaos">0%</span></div>
+          <div class="stat-row"><span>FRIENDLY FIRE EVENTS:</span> <span id="stat-mutinies">0</span></div>
+          <div class="stat-row"><span>WAVES SURVIVED:</span> <span id="stat-wave">0</span></div>
+        </div>
+        <button id="btn-restart" class="btn primary">INFILTRATE NEXT SECTOR</button>
+        <button id="btn-quit" class="btn text">ABANDON OPERATIONS</button>
+      </div>
+    </div>
+
+    <!-- ===== UPGRADE SHOP SCREEN ===== -->
+    <div id="shop-screen" class="screen hidden">
+      <div class="hologram-card">
+        <h2 class="glitch-text" data-text="BLACK MARKET SHOP">BLACK MARKET SHOP</h2>
+        <p class="subtitle">MUTINY SUPPORT VENDOR</p>
+        <div class="stats-report">
+          <div class="stat-row"><span>AVAILABLE CREDITS:</span> <span id="shop-credits"
+              style="color:var(--color-warning);">0</span></div>
+        </div>
+
+        <div class="stats-report" style="margin-top: 15px;">
+          <h3>AVAILABLE UPGRADES</h3>
+          <div class="stat-row" style="align-items: center; margin-bottom: 8px;">
+            <span>MAX HP (+1) [Cost: <span id="shop-price-hp">20</span>]</span>
+            <button id="btn-shop-hp" class="btn primary"
+              style="padding: 4px 8px; font-size: 0.55rem; width: auto; margin-left: 10px;">BUY</button>
+          </div>
+          <div class="stat-row" style="align-items: center; margin-bottom: 8px;">
+            <span>MAX COLOR CHARGES (+1) [Cost: <span id="shop-price-color">10</span>]</span>
+            <button id="btn-shop-color" class="btn primary"
+              style="padding: 4px 8px; font-size: 0.55rem; width: auto; margin-left: 10px;">BUY</button>
+          </div>
+        </div>
+        <button id="btn-shop-close" class="btn primary" style="margin-top: 15px;">CLOSE SHOP & DEPART</button>
+      </div>
+    </div>
+
+    <!-- ===== CONTROLS MODAL ===== -->
+    <div id="controls-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h2 class="glitch-text" data-text="CONTROLS" style="font-size:1.3rem; margin-bottom:6px;">CONTROLS</h2>
+        <p class="subtitle" style="margin-bottom:16px; font-size:0.65rem;">KEYBOARD &amp; CONTROLLER BINDINGS</p>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <h4 style="color:var(--color-primary); margin-bottom:8px; font-size:0.7rem;">⌨ KEYBOARD</h4>
+            <div class="ctrl-row"><span class="ctrl-key">WASD / ↑↓←→</span><span class="ctrl-desc">Move</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">SPACE</span><span class="ctrl-desc">Jump</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">SHIFT</span><span class="ctrl-desc">Dodge Roll</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">F</span><span class="ctrl-desc">Assassinate</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">C</span><span class="ctrl-desc">Camouflage</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">X</span><span class="ctrl-desc">Color Swap</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">I</span><span class="ctrl-desc">Deploy Decoy</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">Q</span><span class="ctrl-desc">Cycle Weapon</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">E</span><span class="ctrl-desc">Pickup / Throw</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">Click / J</span><span class="ctrl-desc">Fire</span></div>
+            <div class="ctrl-row"><span class="ctrl-key">ESC / P</span><span class="ctrl-desc">Pause</span></div>
+          </div>
+          <div class="controls-col">
+            <h4 style="color:var(--color-accent); margin-bottom:8px; font-size:0.7rem;">🎮 CONTROLLER</h4>
+            <div class="ctrl-row"><span class="ctrl-key gp">Left Stick / D-pad</span><span class="ctrl-desc">Move</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">A / Cross</span><span class="ctrl-desc">Jump / Roll</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">A / Cross</span><span class="ctrl-desc">Roll</span></div>
+            <div class="ctrl-row"><span class="ctrl-key gp">B / Circle</span><span class="ctrl-desc">Assassinate</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">Y / Triangle</span><span class="ctrl-desc">Camouflage</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">LB / L1</span><span class="ctrl-desc">Color Swap</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">X / Square</span><span class="ctrl-desc">Deploy Decoy</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">RB / R1</span><span class="ctrl-desc">Cycle Weapon</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">LT / L2</span><span class="ctrl-desc">Pickup / Throw</span>
+            </div>
+            <div class="ctrl-row"><span class="ctrl-key gp">RT / R2</span><span class="ctrl-desc">Fire</span></div>
+            <div class="ctrl-row"><span class="ctrl-key gp">Start / Options</span><span class="ctrl-desc">Pause</span>
+            </div>
+          </div>
+        </div>
+        <button id="btn-controls-close" class="btn primary" style="margin-top:18px; width:100%;">CLOSE</button>
+      </div>
+    </div>
+
+    <!-- ===== OPTIONS MODAL ===== -->
+    <div id="options-modal" class="modal-overlay hidden">
+      <div class="modal-card" style="max-width:360px;">
+        <h2 class="glitch-text" data-text="OPTIONS" style="font-size:1.3rem; margin-bottom:6px;">OPTIONS</h2>
+        <p class="subtitle" style="margin-bottom:20px; font-size:0.65rem;">AUDIO CONFIGURATION</p>
+        <div class="option-row">
+          <label class="option-label" for="sfx-volume">🔊 SFX VOLUME</label>
+          <input type="range" id="sfx-volume" class="vol-slider" min="0" max="100" value="70">
+          <span id="sfx-vol-display" class="vol-display">70</span>
+        </div>
+        <div class="option-row">
+          <label class="option-label" for="music-volume">🎵 MUSIC VOLUME</label>
+          <input type="range" id="music-volume" class="vol-slider" min="0" max="100" value="40">
+          <span id="music-vol-display" class="vol-display">40</span>
+        </div>
+        <button id="btn-options-close" class="btn primary" style="margin-top:20px; width:100%;">SAVE &amp;
+          CLOSE</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PeerJS (WebRTC for LAN multiplayer) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="audio.js?v=37"></script>
+  <script type="module" src="game.js?v=37"></script>
+</body>
+
+</html>
