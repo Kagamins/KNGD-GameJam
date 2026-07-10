@@ -498,6 +498,49 @@ class RetroAudioManager {
     }
   }
 
+  
+  playWinTheme() {
+    if (!this.ctx) return;
+    this.stopMusic(); // Clear BGM
+    const now = this.ctx.currentTime;
+
+    // A triumphant ascending arpeggio
+    const notes = [293.66, 392.00, 587.33, 783.99, 1174.66];
+    notes.forEach((freq, i) => {
+      const t = now + (i * 0.2);
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.connect(gain);
+      gain.connect(this.musicGain);
+      osc.start(t);
+      osc.stop(t + 0.6);
+    });
+  }
+
+  playFailTheme() {
+    if (!this.ctx) return;
+    this.stopMusic(); // Clear BGM
+    const now = this.ctx.currentTime;
+
+    // A melancholic, dissonant descending slide
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.linearRampToValueAtTime(110, now + 1.5);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+    osc.connect(gain);
+    gain.connect(this.musicGain);
+    osc.start(now);
+    osc.stop(now + 2.1);
+  }
+
   setSirenActive(active) {
     if (!this.ctx) return;
     if (active) {

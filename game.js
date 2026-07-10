@@ -2467,6 +2467,11 @@ class GameEngine {
   // ---- GAME OVER ----
   endGame(won, reason) {
     this.state = STATE_GAMEOVER;
+    if (won) {
+    AudioController.playWinTheme();
+  } else {
+    AudioController.playFailTheme();
+  }
     AudioController.stopAll();
 
     // Clear the canvas so no stale gameplay frame shows behind the overlay
