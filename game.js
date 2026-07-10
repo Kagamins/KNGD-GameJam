@@ -507,8 +507,7 @@ class GameEngine {
     ];
 
     // 2. Procedural Background Buildings & elevated roof ledges (Removed)
-    this.buildings = [];
-
+    this.buildings = [{ x: 800, y: 600, w: 301, h: 327 }];
     // 3. Procedural internal concrete pillars (Grid-based with seed variances)
     const numPillars = 8 + (this.stageNumber % 3) + Math.floor(seededRandom() * 6);
     for (let i = 0; i < numPillars; i++) {
@@ -1636,6 +1635,61 @@ class GameEngine {
   }
 
   render() {
+    if (this.mode === 'local') {
+      this.renderSplitScreen();
+    } else {
+      this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      this.renderWorld(); // Extract your current drawing logic into renderWorld()
+    }
+  }
+  setCamera(player) {
+    if (!player) return;
+    this.cameraX = Math.max(0, Math.min(WORLD_WIDTH - CANVAS_WIDTH, player.x - CANVAS_WIDTH / 2));
+    this.cameraY = Math.max(0, Math.min(WORLD_HEIGHT - CANVAS_HEIGHT, player.y - CANVAS_HEIGHT / 2));
+  }
+  renderSplitScreen() {
+    const halfH = CANVAS_HEIGHT / 2;
+
+    // Viewport 1 (Player 1)
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, CANVAS_WIDTH, halfH);
+    this.ctx.clip();
+    this.ctx.fillStyle = '#040814';
+    this.ctx.fillRect(0, 0, CANVAS_WIDTH, halfH);
+    this.setCamera(this.players[0]);
+    this.renderWorld();
+    this.ctx.restore();
+
+    // Viewport 2 (Player 2)
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.rect(0, halfH, CANVAS_WIDTH, halfH);
+    this.ctx.clip();
+    this.ctx.fillStyle = '#040814';
+    this.ctx.fillRect(0, halfH, CANVAS_WIDTH, halfH);
+    this.setCamera(this.players[1]);
+    this.renderWorld();
+    this.ctx.restore();
+
+    // --- NEW: DRAW DIVIDER LINE ---
+    this.ctx.save();
+    this.ctx.strokeStyle = '#00f2ff'; // Using your neon blue theme
+    this.ctx.lineWidth = 4;
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, halfH);
+    this.ctx.lineTo(CANVAS_WIDTH, halfH);
+    this.ctx.stroke();
+
+    // Add a subtle glow effect to the divider
+    this.ctx.shadowColor = '#00f2ff';
+    this.ctx.shadowBlur = 10;
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+
+  renderWorld() {
     this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.ctx.save();
 
@@ -1653,7 +1707,12 @@ class GameEngine {
 
     // 2. Collect all renderable entities for Y-depth sorting
     const drawables = [];
-
+    this.buildings.forEach(b => {
+      drawables.push({
+        ySort: b.y + b.h, // Sort by the base
+        draw: () => GameRenderer.renderStaticBuilding(this.ctx, b, this.cameraX, this.cameraY)
+      });
+    });
     // Platforms
     this.platforms.forEach(p => {
       drawables.push({
@@ -1918,7 +1977,7 @@ class GameEngine {
 
       drawables.push({
         ySort: g.y + g.height,
-        draw: () => GameRenderer.renderCharacter(this.ctx, g, false, this.cameraX, this.cameraY)
+        draw: () => GameRenderer.renderGuard(this.ctx, g, false, this.cameraX, this.cameraY)
       });
     });
 
@@ -1942,7 +2001,7 @@ class GameEngine {
 
         drawables.push({
           ySort: player.y + player.height,
-          draw: () => GameRenderer.renderCharacter(this.ctx, player, idx === this.localPlayerIndex, this.cameraX, this.cameraY, player.weapons, player.currentWeaponIndex)
+          draw: () => GameRenderer.renderPlayer(this.ctx, player, idx === this.localPlayerIndex, this.cameraX, this.cameraY, player.weapons, player.currentWeaponIndex)
         });
       }
     });
